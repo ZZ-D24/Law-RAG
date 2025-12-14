@@ -1,0 +1,6 @@
+curl -X POST http://localhost:5000/qa -H "Content-Type: application/json" -d "{\"question\":\"拐卖儿童违什么法？\"}"
+
+curl -X POST http://localhost:5000/qa_simple -H "Content-Type: application/json" -d "{\"question\":\"拐卖儿童违什么法？\"}"
+
+curl -X POST http://localhost:5000/query -H "Content-Type: application/json" -d "{\"question\":\"拐卖儿童违什么法？\"}"
+

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG QA 面板</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root {
+      --red-900: #7f1d1d;
+      --red-800: #991b1b;
+      --red-700: #b91c1c;
+      --red-600: #dc2626;
+      --red-500: #ef4444;
+      --red-100: #fee2e2;
+      --bg: #fff5f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at 10% 20%, #ffe4e6 0, #fff5f5 35%, #fff 100%);
+      color: #1f2937;
+    }
+    .app-shell {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      color: var(--red-900);
+    }
+    header .title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    header .sub {
+      color: var(--red-600);
+      font-size: 14px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 45px rgba(185, 28, 28, 0.08);
+      border: 1px solid #fca5a5;
+      margin-bottom: 16px;
+    }
+    label {
+      font-weight: 600;
+      color: var(--red-900);
+      display: block;
+      margin-bottom: 8px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #fecdd3;
+      background: #fff;
+      outline: none;
+      resize: vertical;
+      font-size: 14px;
+      line-height: 1.5;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus {
+      border-color: var(--red-500);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--red-800);
+      font-weight: 600;
+      background: #ffe4e6;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid #fecdd3;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--red-600);
+    }
+    button {
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--red-600), var(--red-700));
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(185, 28, 28, 0.25);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(185, 28, 28, 0.3);
+    }
+    .btn-ghost {
+      background: #fff5f5;
+      color: var(--red-700);
+      border: 1px solid #fecdd3;
+    }
+    .hint {
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .conversation {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .bubble {
+      padding: 14px;
+      border-radius: 14px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #7c2d12;
+      font-weight: 600;
+    }
+    .answer {
+      padding: 14px;
+      border-radius: 14px;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      color: #4b5563;
+      white-space: pre-wrap;
+    }
+    .meta {
+      display: flex;
+      gap: 10px;
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #fee2e2;
+      color: var(--red-700);
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #fecdd3;
+    }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9ca3af;
+    }
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99;
+      padding: 16px;
+    }
+    .dialog {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 780px;
+      width: 100%;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+      border: 1px solid #fecdd3;
+      overflow: hidden;
+    }
+    .dialog header {
+      margin: 0;
+      padding: 16px 20px;
+      border-bottom: 1px solid #fee2e2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dialog header h3 {
+      margin: 0;
+      color: var(--red-800);
+      font-size: 18px;
+    }
+    .dialog .close {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: var(--red-700);
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .dialog .body {
+      padding: 16px 20px 20px;
+    }
+    .prompt-block {
+      background: #0f172a;
+      color: #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid #fecdd3;
+      white-space: pre-wrap;
+      max-height: 60vh;
+      overflow: auto;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+      font-size: 13px;
+    }
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .error {
+      margin-top: 8px;
+      color: var(--red-700);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    @media (max-width: 640px) {
+      .controls { flex-direction: column; align-items: flex-start; }
+      button { width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header>
+      <div>
+        <div class="title">法律问答</div>
+      </div>
+    </header>
+
+    <div class="card">
+      <label for="question">问题输入</label>
+      <textarea
+        id="question"
+        v-model="question"
+        placeholder="请输入问题，如：抢劫违反了什么法律？"
+        @keyup.enter.ctrl.exact="submit"
+      ></textarea>
+      <div class="controls">
+        <label class="toggle" for="useKB">
+          <input id="useKB" type="checkbox" v-model="useKnowledge" />
+          <span>使用知识库</span>
+        </label>
+        <button
+          v-if="useKnowledge"
+          class="btn-ghost"
+          :disabled="!latestKnowledgePrompt || loading"
+          @click="openPromptDialog()"
+        >
+          查看提示词
+        </button>
+        <button
+          class="btn-primary"
+          :disabled="!question.trim() || loading"
+          @click="submit"
+        >
+          {{ loading ? "请稍候..." : "提问" }}
+        </button>
+      </div>
+      <div v-if="error" class="error">⚠️ {{ error }}</div>
+    </div>
+
+    <div class="card">
+      <div v-if="latestQuestion">
+        <div class="bubble">Q: {{ latestQuestion }}</div>
+        <div class="answer">A: {{ currentAnswer || "暂无回答" }}</div>
+        <div class="meta">
+          <span class="badge">{{ useKnowledge ? "知识库" : "直连 LLM" }}</span>
+          <span v-if="useKnowledge && currentResults?.length">命中文档 {{ currentResults.length }} 条</span>
+          <button
+            v-if="useKnowledge && currentPrompt"
+            class="btn-ghost"
+            style="padding: 4px 8px; font-weight:600;"
+            @click="openPromptDialog(currentPrompt)"
+          >
+            查看提示词
+          </button>
+        </div>
+      </div>
+      <div v-else class="empty">暂无对话，输入问题开始吧。</div>
+    </div>
+
+    <div v-if="promptDialogVisible" class="dialog-backdrop" @click.self="closePromptDialog">
+      <div class="dialog">
+        <header>
+          <h3>完整提示词</h3>
+          <button class="close" @click="closePromptDialog">×</button>
+        </header>
+        <div class="body">
+          <div class="prompt-block">{{ activePrompt || "暂无可展示的提示词" }}</div>
+          <div class="footer-actions">
+            <button class="btn-primary" @click="closePromptDialog">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 默认指向后端 Flask 服务端口，避免请求落到静态服务器返回 501
+    const API_BASE = "http://localhost:5000";
+
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          question: "",
+          useKnowledge: true,
+          loading: false,
+          error: "",
+          latestQuestion: "",
+          currentAnswer: "",
+          currentResults: [],
+          currentPrompt: "",
+          promptDialogVisible: false,
+          activePrompt: "",
+        };
+      },
+      computed: {
+        latestKnowledgePrompt() {
+          return this.currentPrompt || "";
+        },
+      },
+      methods: {
+        buildKnowledgePrompt(results = [], question = "") {
+          const segments = (results || []).map((item, idx) => {
+            const meta = item.metadata || {};
+            const src = meta.source || "unknown";
+            const header = Object.entries(meta)
+              .filter(([k]) => k !== "source")
+              .map(([k, v]) => `${k}:${v}`)
+              .join(", ");
+            const chunkId = meta.chunk_id || `chunk-${idx + 1}`;
+            const headerPart = header ? ` | ${header}` : "";
+            const text = item.text || "";
+            return `[${idx + 1}] ID:${chunkId} 来源:${src}${headerPart}\n${text}`;
+          });
+          const knowledgeBase = segments.join("\n\n");
+          return (
+            "你是一名法律知识评估助手。你拥有一个外部知识库，知识库内容来自《中华人民共和国刑法》的结构化抽取与图谱化处理。\n\n" +
+            "请遵循以下回答原则：\n" +
+            "1. 结论：必须基于知识库片段，不得使用任何其他知识。\n" +
+            "2. 适用法条：引用检索到的条文原文，格式“【编号】【标题】+关键句”。\n" +
+            "3. 说明：指出满足条文要件的关键事实，并提示需要进一步查证的要件（如主观故意、因果关系）。\n" +
+            "4. 其它：若未命中特定条文或章节，请不要补充常识，不要提示“知识库未命中”。\n\n" +
+            "知识库片段：\n" +
+            knowledgeBase +
+            "\n\n问题是：\n" +
+            `“${question}”\n\n` +
+            "请按照以下格式回答问题：\n" +
+            "【结论】行为是否违法，是否构成犯罪\n" +
+            "【适用法条】列出条文编号 + 条文标题\n" +
+            "【说明】解释为什么符合（或不符合）法条\n"
+          );
+        },
+        buildDirectPrompt(question = "") {
+          return `“${question}”\n\n`;
+        },
+        async submit() {
+          const content = this.question.trim();
+          if (!content || this.loading) return;
+          this.loading = true;
+          this.error = "";
+          const endpoint = this.useKnowledge ? "/qa" : "/qa_simple";
+          try {
+            const resp = await fetch(`${API_BASE}${endpoint}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question: content }),
+            });
+            if (!resp.ok) {
+              const text = await resp.text();
+              throw new Error(text || "请求失败");
+            }
+            const data = await resp.json();
+            this.latestQuestion = data.question || content;
+            // 去掉回答中的 Markdown 加粗标记 **，前端不显示星号
+            const rawAnswer = data.answer || "暂无回答";
+            this.currentAnswer = rawAnswer.replace(/\*\*/g, "");
+            this.currentResults = data.results || [];
+            this.currentPrompt = this.useKnowledge
+              ? this.buildKnowledgePrompt(this.currentResults, this.latestQuestion)
+              : "";
+            this.activePrompt = this.currentPrompt;
+          } catch (err) {
+            this.error = err?.message || "请求异常";
+          } finally {
+            this.loading = false;
+          }
+        },
+        openPromptDialog(prompt) {
+          this.activePrompt = prompt || this.latestKnowledgePrompt || "";
+          this.promptDialogVisible = true;
+        },
+        closePromptDialog() {
+          this.promptDialogVisible = false;
+        },
+      },
+    }).mount("#app");
+  </script>
+</body>
+</html>
+
